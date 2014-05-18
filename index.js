@@ -1,40 +1,42 @@
+var MATCH = "match";
+var UNMATCH = "unmatch";
+var UNKNOWN = "unknown";
 var shallowMatch = function(obj1, obj2) {
-  var result = true;
   if (typeof obj1 !== 'object' || typeof obj2 !== 'object') {
-    return obj1 === obj2;
+    if (obj1 === obj2) return MATCH;
+    return UNMATCH;
   }
-  Object.keys(obj1).forEach(function(key1) {
-    if (obj1[key1]+"" !== obj2[key1]+"") {
-      result = false;
-      return;
-    }
-  });
-  return result;
+  return UNKNOWN;
 };
 
 
 module.exports = function treeMerge(a, b) {
   var ymax = a.length > b.length ? a.length : b.length;
   var xmax = 0;
+  var c = [];
   for (var y=0; y<ymax; y++) {
     a[y] = a[y] || [];
     b[y] = b[y] || [];
-    var xtemp = a[y].length > b[y].length ? a[y].length : b[y].length;
+    c[y] = c[y] || [];
+    var alen, blen = 0;
+    if (typeof a[y] === 'object') alen = a[y].length;
+    if (typeof b[y] === 'object') blen = b[y].length;
+    var xtemp = alen > blen ? alen : blen;
     xmax = xtemp > xmax ? xtemp : xmax;
   }
 
-  var c = [];
   for (var y=0; y<ymax; y++) {
     for (var x=0; x<xmax; x++) {
-      c[y] = c[y] || [];
-      if (a[y][x] && b[y][x] && shallowMatch(a[y][x], b[y][x])) {
+      var exists = a[y][x] && b[y][x];
+      var shallowMatchResult = shallowMatch(a[y][x], b[y][x]);
+      if (exists && shallowMatchResult === MATCH) {
         c[y][x] ? c[y].push(a[y][x]) : c[y][x] = a[y][x];
-      }else {
+      } else if (shallowMatchResult === UNMATCH) {
         if (a[y][x]) c[y].push(a[y][x]);
         if (b[y][x]) c[y].push(b[y][x]);
+      } else if (exists) {
+        c[y][x] = treeMerge([a[y][x]], [b[y][x]])[0];
       }
-        console.log(x, y);
-        console.log(c);
     }
   }
   return c;
